@@ -1,6 +1,10 @@
 import {NextRequest, NextResponse} from 'next/server'
 
 export function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname === '/api/healthcheck') {
+    return NextResponse.next()
+  }
+
   if (
     process.env.BASIC_AUTH_USERNAME === undefined ||
     process.env.BASIC_AUTH_PASSWORD === undefined ||
