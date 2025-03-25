@@ -10,7 +10,7 @@
     "test": "echo \"No tests yet\" && exit 0"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.5.1",
+    "@chakra-ui/react": "^3.14.2",
     "@emotion/react": "^11.14.0",
     "lucide-react": "^0.474.0",
     "next": "15.2.3",
