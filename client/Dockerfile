@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:23-alpine AS builder
 WORKDIR /app
 ARG NEXT_PUBLIC_API_BASEPATH
 ARG NEXT_PUBLIC_PUBLIC_API_KEY
@@ -11,7 +11,7 @@ ENV API_BASEPATH=${API_BASEPATH}
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:22-alpine AS runner
+FROM node:23-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
