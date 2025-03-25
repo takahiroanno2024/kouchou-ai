@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:23-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ ENV NEXT_DISABLE_FETCH_DURING_BUILD=true
 RUN npm run build
 
 # 本番環境用イメージ
-FROM node:22-alpine AS runner
+FROM node:23-alpine AS runner
 
 WORKDIR /app
 
