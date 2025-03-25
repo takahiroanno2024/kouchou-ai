@@ -18,7 +18,7 @@ dependencies = [
     "scipy>=1.15.1",
     "llvmlite>=0.41.0",
     "janome>=0.5.0",
-    "langchain-openai==0.2.3",
+    "langchain-openai==0.3.10",
     "langchain-community==0.3.3",
     "structlog>=25.1.0",
     "uvicorn>=0.34.0",
