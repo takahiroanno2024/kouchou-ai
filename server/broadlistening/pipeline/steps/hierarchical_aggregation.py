@@ -49,6 +49,7 @@ def hierarchical_aggregation(config):
     comments = pd.read_csv(f"inputs/{config['input']}.csv")
     clusters = pd.read_csv(f"outputs/{config['output_dir']}/hierarchical_clusters.csv")
     labels = pd.read_csv(f"outputs/{config['output_dir']}/hierarchical_merge_labels.csv")
+
     hidden_properties_map: dict[str, list[str]] = config["hierarchical_aggregation"]["hidden_properties"]
 
     results["arguments"] = _build_arguments(clusters)
@@ -61,15 +62,61 @@ def hierarchical_aggregation(config):
     results["translations"] = _build_translations(config)
     # 属性情報のカラムは、元データに対して指定したカラムとclassificationするカテゴリを合わせたもの
     results["propertyMap"] = _build_property_map(arguments, hidden_properties_map, config)
+
     with open(f"outputs/{config['output_dir']}/hierarchical_overview.txt") as f:
         overview = f.read()
     print("overview")
     print(overview)
     results["overview"] = overview
 
+    if config["is_pubcom"]:
+        # 大カテゴリ（cluster-level-1）に該当するラベルだけ抽出
+        labels_lv1 = labels[labels["level"] == 1][["id", "label"]].rename(
+            columns={"id": "cluster-level-1-id", "label": "category_label"}
+        )
+
+        # マージ処理
+        merged = arguments.merge(clusters[["arg-id", "cluster-level-1-id"]], on="arg-id").merge(
+            labels_lv1, on="cluster-level-1-id", how="left"
+        )
+
+        # 必要なカラムのみ抽出・整形
+        merged["comment-id"] = merged["comment-id"].apply(
+            lambda x: eval(x) if isinstance(x, str) else x
+        )  # 文字列→リストに変換
+        merged["comment-id"] = merged["comment-id"].apply(lambda ids: [str(i) for i in ids])  # 文字列型IDに統一
+
+        merged = merged[["cluster-level-1-id", "category_label", "arg-id", "argument", "comment-id"]].rename(
+            columns={
+                "cluster-level-1-id": "category_id",
+                "category_label": "category",
+                "arg-id": "arg_id",
+                "argument": "argument",
+                "comment-id": "comment_ids",
+            }
+        )
+
+        # まず merged の comment_ids を explode で展開
+        exploded = merged.explode("comment_ids").rename(columns={"comment_ids": "comment-id"})
+
+        comments = pd.read_csv(f"inputs/{config['input']}.csv")
+
+        # comment-id を結合用に文字列型に揃える
+        exploded["comment-id"] = exploded["comment-id"].astype(str)
+        comments["comment-id"] = comments["comment-id"].astype(str)
+
+        # comments とマージ（左：exploded, 右：元コメント）
+        final_df = exploded.merge(comments, on="comment-id", how="left")
+
+        # カラム順を整理
+        final_df = final_df[["comment-id", "comment-body", "arg_id", "argument", "category_id", "category"]]
+        final_df = final_df.rename(columns={"comment-body": "original-comment"})
+
+        # 保存
+        final_df.to_csv(f"outputs/{config['output_dir']}/final_result_with_comments.csv", index=False)
+        results["csv_path"] = config["output_dir"]
     with open(path, "w") as file:
         json.dump(results, file, indent=2, ensure_ascii=False)
-
     # TODO: サンプリングロジックを実装したいが、現状は全件抽出
     create_custom_intro(config)
 

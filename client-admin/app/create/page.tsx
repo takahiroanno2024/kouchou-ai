@@ -19,6 +19,7 @@ import {
 } from '@chakra-ui/react'
 import { FileUploadDropzone, FileUploadList, FileUploadRoot } from '@/components/ui/file-upload'
 import { useState } from 'react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { StepperInput } from '@/components/ui/stepper-input'
 import { parseCsv, CsvData } from '@/app/create/parseCsv'
 import { useRouter } from 'next/navigation'
@@ -59,6 +60,7 @@ export default function Page() {
   const [initialLabelling, setInitialLabelling] = useState<string>(initialLabellingPrompt)
   const [mergeLabelling, setMergeLabelling] = useState<string>(mergeLabellingPrompt)
   const [overview, setOverview] = useState<string>(overviewPrompt)
+  const [isPubcomMode, setIsPubcomMode] = useState<boolean>(true)
 
   // IDのバリデーション関数
   const isValidId = (id: string): boolean => {
@@ -226,6 +228,35 @@ export default function Page() {
           url: item.url || null
         }))
       }
+    } catch (e) {
+      toaster.create({
+        type: 'error',
+        title: 'CSVファイルの読み込みに失敗しました',
+        description: e as string,
+      })
+      setLoading(false)
+      return
+    }
+    try {
+      const payload = {
+        input,
+        question,
+        intro,
+        comments,
+        cluster: [clusterLv1, clusterLv2],
+        model,
+        workers,
+        prompt: {
+          extraction,
+          initialLabelling,
+          mergeLabelling,
+          overview
+        },
+        is_pubcom: isPubcomMode
+      }
+    
+      console.log('送信されるJSON:', payload)
+
       const response = await fetch(process.env.NEXT_PUBLIC_API_BASEPATH + '/admin/reports', {
         method: 'POST',
         headers: {
@@ -246,6 +277,7 @@ export default function Page() {
             mergeLabelling,
             overview
           },
+          is_pubcom: isPubcomMode,
           inputType
         })
       })
@@ -467,6 +499,21 @@ export default function Page() {
                   </Text>
                 )}
                 <Field.HelperText>英字小文字と数字とハイフンのみ(URLで利用されます)</Field.HelperText>
+              </Field.Root>
+              <Field.Root>
+                <Checkbox
+                  checked={isPubcomMode}
+                  onCheckedChange={(details) => {
+                    const { checked } = details
+                    if (checked === 'indeterminate') return
+                    setIsPubcomMode(checked)
+                  }}
+                >
+                パブコメモード
+                </Checkbox>
+                <Field.HelperText>
+                元のコメントと要約された意見をCSV形式で出力します。完成したCSVファイルはレポート一覧ページからダウンロードできます。
+                </Field.HelperText>
               </Field.Root>
               <Field.Root>
                 <Field.Label>意見グループ数</Field.Label>

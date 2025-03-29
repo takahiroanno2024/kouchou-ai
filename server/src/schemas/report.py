@@ -14,3 +14,4 @@ class Report(SchemaBaseModel):
     title: str
     description: str
     status: ReportStatus
+    is_pubcom: bool = False

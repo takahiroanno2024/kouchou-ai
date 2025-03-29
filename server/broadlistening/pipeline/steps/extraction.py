@@ -29,6 +29,7 @@ def extraction(config):
     workers = config["extraction"]["workers"]
     limit = config["extraction"]["limit"]
     property_columns = config["extraction"]["properties"]
+    is_pubcom = config.get("is_pubcom", False)
     _validate_property_columns(property_columns, comments)
     comment_ids = (comments["comment-id"].values)[:limit]
     comments.set_index("comment-id", inplace=True)
@@ -37,30 +38,59 @@ def extraction(config):
 
     existing_arguments = set()
 
-    for i in tqdm(range(0, len(comment_ids), workers)):
-        batch = comment_ids[i : i + workers]
-        batch_inputs = [comments.loc[id]["comment-body"] for id in batch]
-        batch_results = extract_batch(batch_inputs, prompt, model, workers)
-        for comment_id, extracted_args in zip(batch, batch_results, strict=False):
-            for j, arg in enumerate(extracted_args):
-                if arg not in existing_arguments:
-                    properties = {prop: comments.loc[comment_id][prop] for prop in property_columns}
-                    new_row = {
-                        "arg-id": f"A{comment_id}_{j}",
-                        "comment-id": comment_id,
-                        "argument": arg,
-                        # "source": comments.loc[comment_id]["source"],
-                        **properties,
-                    }
-                    results = pd.concat([results, pd.DataFrame([new_row])], ignore_index=True)
-                    existing_arguments.add(arg)
-        update_progress(config, incr=len(batch))
+    if is_pubcom:
+        # パブコメモード: argumentごとに全てのcomment-idをリストとして保持
+        argument_map = {}
+        for i in tqdm(range(0, len(comment_ids), workers)):
+            batch = comment_ids[i : i + workers]
+            batch_inputs = [comments.loc[id]["comment-body"] for id in batch]
+            batch_results = extract_batch(batch_inputs, prompt, model, workers)
+            for comment_id, extracted_args in zip(batch, batch_results, strict=False):
+                for arg in extracted_args:
+                    if arg not in argument_map:
+                        argument_map[arg] = {"comment_ids": set()}
+                    argument_map[arg]["comment_ids"].add(comment_id)
+            update_progress(config, incr=len(batch))
+
+        rows = []
+        for idx, (arg, data) in enumerate(argument_map.items()):
+            rows.append(
+                {
+                    "arg-id": f"A{idx}",
+                    "argument": arg,
+                    "comment-id": list(data["comment_ids"]),
+                }
+            )
+
+        results = pd.DataFrame(rows)
+
+    else:
+        # 通常の処理: argumentごとにcomment-idは一つのみ
+        for i in tqdm(range(0, len(comment_ids), workers)):
+            batch = comment_ids[i : i + workers]
+            batch_inputs = [comments.loc[id]["comment-body"] for id in batch]
+            batch_results = extract_batch(batch_inputs, prompt, model, workers)
+            for comment_id, extracted_args in zip(batch, batch_results, strict=False):
+                for j, arg in enumerate(extracted_args):
+                    if arg not in existing_arguments:
+                        properties = {prop: comments.loc[comment_id][prop] for prop in property_columns}
+                        new_row = {
+                            "arg-id": f"A{comment_id}_{j}",
+                            "comment-id": comment_id,
+                            "argument": arg,
+                            # "source": comments.loc[comment_id]["source"],
+                            **properties,
+                        }
+                        results = pd.concat([results, pd.DataFrame([new_row])], ignore_index=True)
+                        existing_arguments.add(arg)
+            update_progress(config, incr=len(batch))
     if results.shape == (0, 0):
         raise RuntimeError("result is empty, maybe bad prompt")
 
     classification_categories = config["extraction"]["categories"]
     if classification_categories:
         results = classify_args(results, config, workers)
+
     results.to_csv(path, index=False)
 
 

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
@@ -8,6 +9,9 @@ from src.middleware.security_middleware import register_security_middleware
 from src.routers import router
 from src.services.report_status import load_status
 from src.utils.logger import setup_logger
+
+# Load environment variables from .env file
+load_dotenv()
 
 slogger = setup_logger()
 

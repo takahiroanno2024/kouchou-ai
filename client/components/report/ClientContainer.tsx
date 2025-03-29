@@ -18,6 +18,7 @@ export function ClientContainer({result}: Props) {
   const [minValue, setMinValue] = useState(5)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+
   function updateFilteredResult(maxDensity: number, minValue: number) {
     if (!result) return
     setFilteredResult({

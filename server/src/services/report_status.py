@@ -44,6 +44,7 @@ def add_new_report_to_status(report_input: ReportInput) -> None:
             "status": "processing",
             "title": report_input.question,
             "description": report_input.intro,
+            "is_pubcom": report_input.is_pubcom,
         }
         save_status()
 

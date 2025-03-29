@@ -11,7 +11,8 @@ export type Report = {
   slug: string,
   status: string,
   title: string
-  description: string
+  description: string,
+  isPubcom: boolean
 }
 
 export type Result = {

@@ -2,10 +2,12 @@
 
 import {Header} from '@/components/Header'
 import {Report} from '@/type'
-import {Box, Button, Card, Heading, HStack, Spinner, Text, VStack} from '@chakra-ui/react'
+import {Box, Button, Card, Heading, HStack, Spinner, Text, VStack, Icon} from '@chakra-ui/react'
 import Link from 'next/link'
-import {CircleCheckIcon, CircleFadingArrowUpIcon, CircleAlertIcon, EllipsisIcon, ExternalLinkIcon} from 'lucide-react'
+import {CircleCheckIcon, CircleFadingArrowUpIcon, CircleAlertIcon, EllipsisIcon, ExternalLinkIcon, DownloadIcon} from 'lucide-react'
 import {MenuContent, MenuItem, MenuRoot, MenuTrigger} from '@/components/ui/menu'
+import {Tooltip} from '@/components/ui/tooltip'
+import {getApiBaseUrl} from '@/app/utils/api'
 import {useEffect, useState} from 'react'
 
 export default function Page() {
@@ -97,6 +99,42 @@ export default function Page() {
                     </Box>
                   </HStack>
                   <HStack>
+
+                    {report.status === 'ready' && report.isPubcom && (
+                      <Tooltip content={'CSVファイルをダウンロード'} openDelay={0} closeDelay={0}>
+                        <Button
+                          variant={'ghost'}
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(getApiBaseUrl() + `/get-csv/${report.slug}`, {
+                                headers: {
+                                  'x-api-key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
+                                  'Content-Type': 'application/json'
+                                }
+                              })
+                              if (!response.ok) {
+                                throw new Error('CSVダウンロード失敗')
+                              }
+                              const blob = await response.blob()
+                              const url = window.URL.createObjectURL(blob)
+                              const link = document.createElement('a')
+                              link.href = url
+                              link.download = `kouchou_${report.slug}.csv`
+                              link.click()
+                              window.URL.revokeObjectURL(url)
+                            } catch (error) {
+                              console.error(error)
+                              alert('CSVのダウンロードに失敗しました')
+                            }
+                          }}
+                        >
+                          <Icon><DownloadIcon/></Icon>
+                        </Button>
+                      </Tooltip>
+                    )}
+
+
+
                     {report.status === 'ready' && (
                       <Link href={`${process.env.NEXT_PUBLIC_CLIENT_BASEPATH}/${report.slug}`} target={'_blank'}>
                         <Button variant={'ghost'}>
